@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import CartElement from "../components/CartElement";
 import { useAuth } from "../context/AuthContext";
 
-const Cart = () => {
+const Cart = ({ restoredBackgroundLocation = null }) => {
   const [total, setTotal] = useState(0);
   const { session, user } = useAuth();
   const location = useLocation();
-  const isOverlay = Boolean(location.state?.backgroundLocation);
+  const navigate = useNavigate();
+
+  const backgroundLocation =
+    location.state?.backgroundLocation || restoredBackgroundLocation;
+
+  const isOverlay = Boolean(backgroundLocation);
   const [searchParams] = useSearchParams();
   const isCanceled = searchParams.get("canceled") === "true";
   const [submittingType, setSubmittingType] = useState(null); // 'shipping' | 'pickup'
@@ -118,7 +123,18 @@ const Cart = () => {
       }
 
       if (data.url) {
-        localStorage.removeItem("guestCart");
+        const backgroundLocation =
+          location.state?.backgroundLocation || {
+            pathname: "/shop",
+            search: "",
+            hash: "",
+          };
+
+        sessionStorage.setItem(
+          "checkoutCartBackground",
+          JSON.stringify(backgroundLocation)
+        );
+
         window.location.href = data.url;
       } else {
         throw new Error("No checkout URL was provided by the server.");
@@ -132,22 +148,32 @@ const Cart = () => {
   };
 
   return (
-    <div className={`flex flex-col w-full min-h-screen pt-24 md:fixed md:inset-y-0 md:right-0 md:z-[60] md:w-[480px] md:overflow-y-auto md:pt-0 bg-[#C5AE98] ${
-      isOverlay
-        ? "md:shadow-[0_0_0_100vmax_rgba(0,0,0,0.5)]"
-        : ""
-    }`}>
+    <div
+      className={`flex min-h-screen w-full flex-col bg-[#C5AE98] ${
+        isOverlay
+          ? "pt-24 md:fixed md:inset-y-0 md:right-0 md:z-[60] md:w-[480px] md:overflow-y-auto md:pt-0 md:shadow-[0_0_0_100vmax_rgba(0,0,0,0.5)]"
+          : "mx-auto max-w-5xl pt-28 md:pt-40"
+      }`}
+    >
       {isOverlay && (
         <button
           type="button"
           aria-label="Close cart"
-          onClick={() => window.history.back()}
+          onClick={() => {
+            navigate(
+              {
+                pathname: backgroundLocation?.pathname || "/shop",
+                search: backgroundLocation?.search || "",
+                hash: backgroundLocation?.hash || "",
+              },
+              { replace: true }
+            );
+          }}
           className="absolute right-4 top-7 z-10 hidden h-10 w-10 cursor-pointer items-center justify-center text-2xl text-white hover:scale-105 md:flex"
         >
           ×
         </button>
       )}
-
       <h1 className="px-8 pt-8 font-serif text-3xl text-white">
         Your Cart
       </h1>
