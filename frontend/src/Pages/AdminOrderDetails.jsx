@@ -760,7 +760,7 @@ function AdminOrderDetails() {
                   disabled={
                     updatingStatus
                   }
-                  className="rounded-lg bg-red-700 px-6 py-3 font-serif text-white transition hover:scale-105 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg bg-red-700 px-6 py-3 font-serif text-white transition hover:scale-105 hover:bg-red-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {updatingStatus
                     ? "Updating..."
@@ -776,7 +776,7 @@ function AdminOrderDetails() {
                   disabled={
                     updatingStatus
                   }
-                  className="rounded-lg border border-red-300 bg-red-900/30 px-6 py-3 font-serif text-white transition hover:scale-105 hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg border border-red-300 bg-red-900 px-6 py-3 font-serif text-white transition hover:scale-105 hover:bg-red-900/80 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {updatingStatus
                     ? "Updating..."
