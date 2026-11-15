@@ -49,7 +49,37 @@ function AppContent({ children }) {
 
 function CartRouteLayer({ children }) {
   const location = useLocation();
-  const backgroundLocation = location.state?.backgroundLocation;
+  const isCartRoute = location.pathname.toLowerCase() === "/cart";
+
+  let backgroundLocation = isCartRoute
+    ? location.state?.backgroundLocation
+    : null;
+
+  // Restore the background when returning from checkout.
+  if (isCartRoute && !backgroundLocation) {
+    try {
+      const savedLocation = JSON.parse(
+        sessionStorage.getItem("checkoutCartBackground") || "null"
+      );
+
+      if (
+        typeof savedLocation?.pathname === "string" &&
+        savedLocation.pathname.startsWith("/") &&
+        savedLocation.pathname.toLowerCase() !== "/cart"
+      ) {
+        backgroundLocation = savedLocation;
+      }
+    } catch {
+      backgroundLocation = null;
+    }
+
+    // Use Shop if no previous background was saved.
+    backgroundLocation = backgroundLocation || {
+      pathname: "/shop",
+      search: "",
+      hash: "",
+    };
+  }
 
   return (
     <>
@@ -57,7 +87,9 @@ function CartRouteLayer({ children }) {
         {children(backgroundLocation || location)}
       </div>
 
-      {backgroundLocation && <Cart />}
+      {isCartRoute && backgroundLocation && (
+        <Cart restoredBackgroundLocation={backgroundLocation} />
+      )}
     </>
   );
 }
