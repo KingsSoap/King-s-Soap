@@ -1,13 +1,35 @@
 import supabase, { getSupabaseClient } from "../supabaseClient.js";
 import Stripe from "stripe";
-import easypost from "../easypostClient.js";  
+import easypost from "../easypostClient.js";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { purchaseEasyPostLabelFromStripe } from "./webhookController.js";
 import {
   sendCancellationRequestToAdmin,
   sendOrderCancelledEmail,
-} from "../services/emailService.js";  
+} from "../services/emailService.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Verify a cancellation token against its stored SHA-256 hash
+const verifyCancellationToken = (token, storedHash) => {
+  if (
+    typeof token !== "string" ||
+    !/^[a-f0-9]{64}$/.test(token) ||
+    typeof storedHash !== "string" ||
+    !/^[a-f0-9]{64}$/.test(storedHash)
+  ) {
+    return false;
+  }
+
+  const submittedHash = createHash("sha256")
+    .update(token)
+    .digest();
+
+  const expectedHash = Buffer.from(storedHash, "hex");
+
+  return timingSafeEqual(submittedHash, expectedHash);
+};
+
 
 /**
  * Sanitizes and validates an image URL for use in Stripe checkout.
@@ -824,6 +846,28 @@ export const requestCancelOrder = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Order not found.",
+      });
+    }
+
+    // Check whether the authenticated customer owns this order
+    const isOrderOwner =
+      req.user?.id &&
+      order.user_id &&
+      req.user.id === order.user_id;
+
+    // Check the cancellation token provided in the request
+    const cancellationToken = req.body?.cancellationToken;
+
+    const hasValidToken = verifyCancellationToken(
+      cancellationToken,
+      order.cancellation_token_hash
+    );
+
+    // Require either verified ownership or a valid cancellation token
+    if (!isOrderOwner && !hasValidToken) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to request cancellation of this order.",
       });
     }
 

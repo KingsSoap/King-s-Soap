@@ -199,13 +199,25 @@ const OrderHistory = () => {
     setCancelError(null);
 
     try {
+      // Retrieve the signed-in customer's Supabase session
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
       const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
       const response = await fetch(
         `${API_BASE_URL}/api/checkout/orders/${encodeURIComponent(selectedOrderForCancel.id)}/request-cancel`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
           },
         }
       );

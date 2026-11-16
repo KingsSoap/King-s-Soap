@@ -31,23 +31,75 @@ export const requireAuth = async (req, res, next) => {
       return next();
     }
 
-    // Fallback for development/testing when userId is provided directly
-    const fallbackUserId = req.body?.userId || req.query?.userId;
-    if (fallbackUserId) {
-      req.user = {
-        id: fallbackUserId,
-        email: req.body?.email || req.query?.email || null,
-      };
+    // Deleted fallback for development/testing when userId is provided directly
+   
+
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required. Please provide a valid bearer token.",
+    });
+  } catch (err) {
+    console.error("Auth middleware error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal authentication error.",
+    });
+  }
+};
+
+
+
+
+
+// Optional authentication for routes supporting signed-in users and guests
+export const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    // No token: continue as a guest
+    if (!authHeader) {
+      req.user = null;
       req.authToken = null;
       return next();
     }
 
-    return res.status(401).json({
-      success: false,
-      message: "Authentication required. Please provide a valid bearer token or user ID.",
-    });
+    // Reject malformed Authorization headers
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication header.",
+      });
+    }
+
+    const token = authHeader.slice("Bearer ".length).trim();
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication token is missing.",
+      });
+    }
+
+    // Verify the token with Supabase
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired authentication token.",
+      });
+    }
+
+    req.user = user;
+    req.authToken = token;
+
+    return next();
   } catch (err) {
-    console.error("Auth middleware error:", err);
+    console.error("Optional authentication error:", err);
+
     return res.status(500).json({
       success: false,
       message: "Internal authentication error.",
@@ -90,3 +142,29 @@ export const requireTokenAuth = async (req, res, next) => {
         });
     }
 };
+
+
+
+// Require the authenticated user to be an administrator
+export const requireAdmin = (req, res, next) => {
+  // Make sure authentication middleware ran first
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
+  }
+
+  // Check the administrator role stored in Supabase
+  if (req.user.app_metadata?.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Administrator access required.",
+    });
+  }
+
+  // User is an administrator
+  next();
+};
+
+

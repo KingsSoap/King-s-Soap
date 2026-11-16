@@ -155,14 +155,31 @@ const archiveMessage = async () => {
       response: response,
     };
 
-      try {
-        const response = await fetch(`http://localhost:3000/api/messages/${selectedMessage.id}/response`, {
+    try {
+      // Get the administrator's Supabase session
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        throw new Error("Your session has expired. Please sign in again.");
+      }
+
+      const API_BASE_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/messages/${selectedMessage.id}/response`,
+        {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify(responseData),
-        });
+        }
+      );
 
         const result = await response.json();
         console.log("Backend response:", result);

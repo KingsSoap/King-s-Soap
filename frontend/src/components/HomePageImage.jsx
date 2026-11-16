@@ -27,7 +27,7 @@ function HomeImage() {
             <p className="md:mt-4 text-sm md:text-xl font-serif font-medium leading-relaxed">
             Enjoying the art of soap-making since 2016.
             </p>
-            <p className="text-sm md:text-xl font-serif">Hand-Made | Family-Owned</p>
+            <p className="text-sm md:text-xl font-serif">Handmade | Family-Owned</p>
         </div>
         {/*
         <div className="absolute inset-0 flex items-center justify-center">

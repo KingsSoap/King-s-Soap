@@ -1,15 +1,19 @@
-import express from 'express';
+import express from "express";
+import { createMessage, saveResponse } from "../controllers/messageController.js";
+import { requireAuth, requireAdmin } from "../middleware/authMiddleware.js";
 
-//Import controller function that handles new customer messages
-import {createMessage, saveResponse,} from "../controllers/messageController.js";
-
-//Router for message related backend requests
+// Router for message-related backend requests
 const router = express.Router();
 
-//Send a new customer message
+// Public contact form: customers can submit messages
 router.post("/", createMessage);
 
-//Save admin response for one message. Find message by its db id
-router.patch("/:id/response", saveResponse);
+// Only administrators can reply to customer messages
+router.patch(
+  "/:id/response",
+  requireAuth,
+  requireAdmin,
+  saveResponse
+);
 
 export default router;

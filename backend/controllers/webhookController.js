@@ -2,8 +2,20 @@ import Stripe from "stripe";
 import supabase from "../supabaseClient.js";
 import easypost from "../easypostClient.js";
 import { sendOrderConfirmationEmail } from "../services/emailService.js";
+import { randomBytes, createHash } from "node:crypto";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Generate a secure cancellation token and its SHA-256 hash
+const generateCancellationToken = () => {
+  const token = randomBytes(32).toString("hex");
+
+  const tokenHash = createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  return { token, tokenHash };
+};
 
 const SENDER_ADDRESS = {
   street1: "6000 J St",
@@ -163,73 +175,92 @@ export const handleStripeWebhook = async (req, res) => {
           ...(customerEmail ? { customer_email: customerEmail } : {}),
         };
 
-        let updateQuery = supabase.from("orders").update(updatePayload);
+        // Only transition orders that are still pending
+        let updateQuery = supabase
+          .from("orders")
+          .update(updatePayload)
+          .eq("status", "pending");
+
         if (orderId) {
           updateQuery = updateQuery.eq("id", orderId);
         } else {
           updateQuery = updateQuery.eq("stripe_session_id", session.id);
         }
 
-        const { error: orderUpdateError } = await updateQuery;
+        // Return the updated row so we can verify this request claimed the order
+        const { data: updatedOrders, error: orderUpdateError } =
+          await updateQuery.select("id");
+
         if (orderUpdateError) {
           console.error("Failed to update order status in Supabase:", orderUpdateError);
-        } else {
-          console.log(`Order ${orderId || session.id} placed on hold pending admin approval.`);
+          throw orderUpdateError;
         }
+
+          // Determine which order was updated
+          let processedOrderId = updatedOrders?.[0]?.id;
+
+          // Track whether this is a retry of an existing order
+          const isWebhookRetry = !processedOrderId;
+
+          // If the order was not pending, check whether inventory processing needs recovery
+          if (!processedOrderId) {
+            const { data: existingOrder, error: lookupError } = await supabase
+              .from("orders")
+              .select("id, status, inventory_processed_at")
+              .eq("stripe_session_id", session.id)
+              .maybeSingle();
+
+          if (lookupError) {
+            throw lookupError;
+          }
+
+          // Only resume orders still on hold with unfinished inventory processing
+          if (
+            !existingOrder ||
+            existingOrder.status !== "on_hold" ||
+            existingOrder.inventory_processed_at !== null
+          ) {
+            console.log(`Order ${orderId || session.id} already processed or not eligible. Skipping.`);
+            break;
+          }
+
+          processedOrderId = existingOrder.id;
+        }
+
+        console.log(`Processing checkout for order ${processedOrderId}.`);
+
+
 
         // 3. EasyPost label purchase is decoupled here (DT-542).
         // Label will be purchased when an admin explicitly accepts the order (DT-543).
 
 
-        // 4. Update public.products: decrement stock, increment lifetime sales, update Availability
-        if (orderId) {
-          // Fetch the purchased items for this order
-          const { data: items, error: itemsError } = await supabase
-            .from("order_items")
-            .select("product_id, quantity")
-            .eq("order_id", orderId);
-
-          if (itemsError) {
-            console.error("Failed to fetch order items for inventory update:", itemsError);
-          } else if (items && items.length > 0) {
-            for (const item of items) {
-              // Fetch current stock and sales for this product
-              const { data: product, error: prodError } = await supabase
-                .from("products")
-                .select("id, stock, sales, Availability")
-                .eq("id", item.product_id)
-                .single();
-
-              if (prodError || !product) {
-                console.error(`Failed to fetch product ${item.product_id}:`, prodError);
-                continue;
-              }
-
-              const currentStock = product.stock ?? 0;
-              const currentSales = Number(product.sales ?? 0);
-              const newStock = Math.max(0, currentStock - item.quantity);
-              const newSales = currentSales + item.quantity;
-              const isAvailable = newStock > 0;
-
-              const { error: updateProdError } = await supabase
-                .from("products")
-                .update({
-                  stock: newStock,
-                  sales: newSales,
-                  Availability: isAvailable,
-                })
-                .eq("id", item.product_id);
-
-              if (updateProdError) {
-                console.error(`Failed to update product ${item.product_id}:`, updateProdError);
-              } else {
-                console.log(
-                  `Product ${item.product_id} updated: stock ${currentStock}->${newStock}, sales ${currentSales}->${newSales}, Availability=${isAvailable}`
-                );
-              }
-            }
-          }
+        // 4. Process inventory and cancellation token atomically through Supabase
+        if (!processedOrderId) {
+          throw new Error("Cannot process inventory without a valid order ID.");
         }
+
+        // Generate a secure cancellation token before processing inventory
+        const { token: cancellationToken, tokenHash } = generateCancellationToken();
+
+        // Process inventory and store the token hash in one database transaction
+        const { data: inventoryProcessed, error: inventoryError } =
+          await supabase.rpc("process_order_inventory", {
+            p_order_id: processedOrderId,
+            p_token_hash: tokenHash,
+          });
+
+        if (inventoryError) {
+          console.error("Failed to process order inventory:", inventoryError);
+          throw inventoryError;
+        }
+
+        if (!inventoryProcessed) {
+          console.log(`Inventory already processed for order ${processedOrderId}. Skipping.`);
+          break;
+        }
+
+        console.log(`Inventory and cancellation token processed for order ${processedOrderId}.`);
 
         // 5. Clear cart: DELETE FROM public.cart WHERE user_ID = metadata.user_id
        try {
@@ -254,24 +285,35 @@ export const handleStripeWebhook = async (req, res) => {
         }
 
         // 6. Send order confirmation email with cancellation request option
-        console.log("DEBUG CHECK - Customer Email captured:", customerEmail);
-        console.log("DEBUG CHECK - Order ID captured:", orderId);
-        
-        if (customerEmail && orderId) {
+        if (customerEmail && processedOrderId && cancellationToken) {
           const customerName =
             session.customer_details?.name ||
             session.shipping_details?.name ||
             "Customer";
 
-          sendOrderConfirmationEmail({
-            customerEmail,
-            customerName,
-            orderId,
-            totalAmount: finalTotal,
-            isPickup: fulfillmentType === "pickup",
-          }).catch((mailErr) => {
-            console.error("Failed to send order confirmation email:", mailErr);
-          });
+          let emailResult;
+
+          try {
+            emailResult = await sendOrderConfirmationEmail({
+              customerEmail,
+              customerName,
+              orderId: processedOrderId,
+              totalAmount: finalTotal,
+              isPickup: fulfillmentType === "pickup",
+              cancellationToken,
+            });
+          } catch (emailError) {
+            console.error("Confirmation email request failed:", emailError);
+            emailResult = { success: false };
+          }
+
+          const emailAccepted = emailResult?.success === true;
+
+          if (!emailAccepted) {
+            console.error(
+              `Brevo did not accept the confirmation email for order ${processedOrderId}.`
+            );
+          }
         }
 
         break;

@@ -9,9 +9,16 @@ export default function RequestCancellation() {
   const [message, setMessage] = useState("");
 
   const handleConfirmCancel = async () => {
-    if (!orderId) {
+    // Retrieve the cancellation token from the confirmation email URL
+    const cancellationToken = new URLSearchParams(
+      window.location.search
+    ).get("token");
+
+    if (!orderId || !cancellationToken) {
       setStatus("error");
-      setMessage("Missing order ID. Please use the link provided in your order confirmation email.");
+      setMessage(
+        "Invalid cancellation link. Please use the link provided in your order confirmation email."
+      );
       return;
     }
 
@@ -19,12 +26,21 @@ export default function RequestCancellation() {
     setMessage("");
 
     try {
-      const response = await fetch(`http://localhost:3000/api/checkout/orders/${encodeURIComponent(orderId)}/request-cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const API_BASE_URL =
+        import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/checkout/orders/${encodeURIComponent(orderId)}/request-cancel`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cancellationToken,
+          }),
+        }
+      );
 
       const data = await response.json();
 
