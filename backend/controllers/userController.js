@@ -5,6 +5,13 @@ export const changeUserAddress = async (req, res) => {
 
     const { id } = req.params;
 
+    // Verify that the authenticated user owns this account
+    if (req.user.id !== id) {
+      return res.status(403).json({
+        message: "You are not authorized to update this address."
+      });
+    }
+
     const {
       Street,
       "Apt. Num": aptNum,

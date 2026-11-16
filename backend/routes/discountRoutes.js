@@ -1,22 +1,22 @@
 import express from "express";
 import { getAllDiscounts, getDiscountById, createDiscount, updateDiscount, archiveDiscount } from "../controllers/discountController.js";
-import { requireTokenAuth } from "../middleware/authMiddleware.js";
+import { requireTokenAuth, requireAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-//Signed in user can retrieve the discount list (will eventually be admin only)
-router.get("/", requireTokenAuth, getAllDiscounts);
+// Only administrators can retrieve the discount list
+router.get("/", requireTokenAuth, requireAdmin, getAllDiscounts);
 
-// Load one discount's saved values for the update popup.
-router.get("/:id", requireTokenAuth, getDiscountById);
+// Only administrators can retrieve a discount's saved values
+router.get("/:id", requireTokenAuth, requireAdmin, getDiscountById);
 
-//Signed in user can create a discount
-router.post("/", requireTokenAuth, createDiscount);
+// Only administrators can create discounts
+router.post("/", requireTokenAuth, requireAdmin, createDiscount);
 
-// Save changes to the discount selected from an admin tile.
-router.patch("/:id", requireTokenAuth, updateDiscount);
+// Only administrators can update discounts
+router.patch("/:id", requireTokenAuth, requireAdmin, updateDiscount);
 
-// Archive a discount selected from an admin tile.
-router.patch("/:id/archive", requireTokenAuth, archiveDiscount);
+// Only administrators can archive discounts
+router.patch("/:id/archive", requireTokenAuth, requireAdmin, archiveDiscount);
 
 export default router;
