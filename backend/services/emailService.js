@@ -53,11 +53,22 @@ export const sendOrderConfirmationEmail = async ({
   orderId,
   totalAmount,
   isPickup = false,
+  cancellationToken,
 }) => {
   if (!customerEmail) return;
 
+  // Require a cancellation token before generating the email
+  if (!cancellationToken) {
+    throw new Error("Cancellation token is required.");
+  }
+
   const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-  const cancellationUrl = `${clientUrl}/request-cancellation?orderId=${encodeURIComponent(orderId)}`;
+
+  // Include the order ID and secure cancellation token in the link
+  const cancellationUrl =
+    `${clientUrl}/request-cancellation` +
+    `?orderId=${encodeURIComponent(orderId)}` +
+    `&token=${encodeURIComponent(cancellationToken)}`;
 
   const subject = `King's Soap: Order Confirmation (#${orderId.slice(0, 8)})`;
   const textContent = `Hello ${customerName},

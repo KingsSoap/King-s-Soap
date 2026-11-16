@@ -18,7 +18,18 @@ dotenv.config(); // Use port from .env file if available, otherwise use default 
 const app = express(); // Main Express application instance
 const PORT = process.env.PORT || 3000;
 
-app.use(cors()); // For enabling CORS (Frontend can make requests to this backend from a different origin)
+// Allow requests from the local frontend and production website
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://shopkingssoap.com",
+  "https://www.shopkingssoap.com",
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+}));
+
+
 app.use(helmet()); // For security headers
 app.use(morgan("dev")); // For logging HTTP requests to backend console
 
@@ -33,7 +44,6 @@ app.use(express.json()); // For parsing JSON request bodies
 
 app.use("/api/products", productRoutes);//Connects request from the frontend to the backend routes in productRoutes.js
 app.use("/api/users", userRoutes);//Connects request from the frontend to the backend routes in productRoutes.js
-app.use("/api/products", productRoutes); // Connects request from the frontend to the backend routes in productRoutes.js
 app.use("/api/checkout", checkoutRoutes); // Checkout endpoints: validation, sessions, orders
 app.use("/api/discounts", discountRoutes); //Require a signed in user for discount requests
 app.use("/api/messages", messageRoutes);

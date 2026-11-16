@@ -1,6 +1,33 @@
 import supabase from "../supabaseClient.js";
+import { randomUUID } from "node:crypto";
+import { fileTypeFromBuffer } from "file-type";
+
+// Allowed image formats and their extensions
+const allowedImageTypes = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+};
+
+// Verify the actual file type using its contents
+const validateImage = async (file) => {
+    const detectedType = await fileTypeFromBuffer(file.buffer);
+
+    // Reject files that are not supported images
+    if (!detectedType || !allowedImageTypes[detectedType.mime]) {
+        return null;
+    }
+
+    // Reject files whose declared MIME type doesn't match
+    if (file.mimetype !== detectedType.mime) {
+        return null;
+    }
+
+    return allowedImageTypes[detectedType.mime];
+};
 
 export const getAllProducts = async (req, res) => {};
+
 
 export const createProduct = async (req, res) => {
     try {
@@ -79,18 +106,29 @@ export const createProduct = async (req, res) => {
         //Store each Storage path in case the upload needs to be reversed
         const uploadedFilePaths = [];
 
-        //Upload each selected image to Supabase
-        
-        //Create the unique URL for each image
-        for (const [index, file] of req.files.entries()) {
-            const filePath = `images/${Date.now()}-${index}-${file.originalname}`;
+        // Validate all images before uploading anything to Supabase
+        const validatedImages = [];
+
+        for (const file of req.files) {
+            const extension = await validateImage(file);
+
+            if (!extension) {
+                return res.status(400).json({
+                    message: "Invalid image. Only valid JPG, PNG, and WebP files are allowed.",
+                });
+            }
+
+            validatedImages.push({ file, extension });
+        }
+
+        // Upload each validated image to Supabase
+        for (const { file, extension } of validatedImages) {
+            const filePath = `images/${randomUUID()}${extension}`;
 
             //Ask DB to upload current image file
             const {error:uploadError} = await supabase.storage
                 .from("Product Images")
-                //Upload file to generated file path. Buffer contains the image data held in server memory
                 .upload(filePath, file.buffer, {
-                    //Tell DB file type
                     contentType: file.mimetype,
                 });
 
@@ -287,20 +325,34 @@ if (orderError) {
 //Store the public URLs created for the newly uploaded images
 const publicUrls =[];
 
-//Store internal paths in the the upload has to be reversed
+//Store internal paths in case the upload has to be reversed
 const uploadedFilePaths = [];
 
- for (const [index, file] of req.files.entries()) {
-            const filePath = `images/${Date.now()}-${index}-${file.originalname}`;
+// Validate all images before uploading anything to Supabase
+const validatedImages = [];
 
-            //Ask DB to upload current image file
-            const {error:uploadError} = await supabase.storage
-                .from("Product Images")
-                //Upload file to generated file path. Buffer contains the image data held in server memory
-                .upload(filePath, file.buffer, {
-                    //Tell DB file type
-                    contentType: file.mimetype,
-                });
+for (const file of req.files) {
+    const extension = await validateImage(file);
+
+    if (!extension) {
+        return res.status(400).json({
+            message: "Invalid image. Only valid JPG, PNG, and WebP files are allowed.",
+        });
+    }
+
+    validatedImages.push({ file, extension });
+}
+
+// Upload each validated image to Supabase
+for (const { file, extension } of validatedImages) {
+    const filePath = `images/${randomUUID()}${extension}`;
+
+    //Ask DB to upload current image file
+    const {error:uploadError} = await supabase.storage
+        .from("Product Images")
+        .upload(filePath, file.buffer, {
+            contentType: file.mimetype,
+        });
 
             if (uploadError) {
                 console.error("Could not upload image:", uploadError);

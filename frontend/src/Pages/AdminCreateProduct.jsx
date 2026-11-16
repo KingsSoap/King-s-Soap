@@ -1,5 +1,7 @@
 import { useState } from "react";
 import AdminImageManager from "../components/AdminImageManager";
+import supabase from "../supabaseClient";
+
 const categoryOptions = [
   "Coconut Oil",
   "All Natural",
@@ -105,9 +107,27 @@ function AdminCreateProduct( {
       });
 
       try {
+        // Get the administrator's current Supabase session
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        // Stop if there is no valid session available
+        if (sessionError || !session?.access_token) {
+          setError("Your session has expired. Please sign in again.");
+          return;
+        }
+        
+        
+        // Send the product information with the authentication token
         const response = await fetch("http://localhost:3000/api/products", {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
           body: formData,
+
         });
 
         const result = await response.json();
