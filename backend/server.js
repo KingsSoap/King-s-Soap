@@ -30,7 +30,11 @@ app.use(cors({
 
 
 app.use(helmet()); // For security headers
-app.use(morgan("dev")); // For logging HTTP requests to backend console
+
+// Detailed request logging in development only
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
 
 // DT-490: Mount raw Stripe webhook handler BEFORE express.json()
 app.post(
@@ -39,17 +43,39 @@ app.post(
   handleStripeWebhook
 );
 
-app.use(express.json()); // For parsing JSON request bodies
-
-app.use("/api/products", productRoutes);//Connects request from the frontend to the backend routes in productRoutes.js
-app.use("/api/checkout", checkoutRoutes); // Checkout endpoints: validation, sessions, orders
-app.use("/api/discounts", discountRoutes); //Require a signed in user for discount requests
+app.use("/api/products", productRoutes);
+app.use("/api/checkout", checkoutRoutes);
+app.use("/api/discounts", discountRoutes);
 app.use("/api/messages", messageRoutes);
 
+
+// Global error handler - prevent internal errors from reaching customers
+app.use((err, req, res, next) => {
+  console.error(
+    "Unhandled API error:",
+    err?.code || err?.type || "Unknown error"
+  );
+
+  const status =
+    Number.isInteger(err.status) &&
+    err.status >= 400 &&
+    err.status < 600
+      ? err.status
+      : 500;
+
+  return res.status(status).json({
+    success: false,
+    message:
+      status >= 500
+        ? "An unexpected server error occurred. Please try again."
+        : "The request could not be processed.",
+  });
+});
+
 if (process.env.NODE_ENV !== "test") {
-    app.listen(PORT, () => {
-        console.log("Server is running on port " + PORT);
-    });
+  app.listen(PORT, () => {
+    console.log("Server is running on port " + PORT);
+  });
 }
 
 export default app;

@@ -120,11 +120,9 @@ const PaymentSuccessful = () => {
           Thank you for your purchase!
         </p>
 
-        {order.customer_email && (
-          <p className="text-white text-center text-sm">
-            An order confirmation has been sent to {order.customer_email}
-          </p>
-        )}
+        <p className="text-white text-center text-sm">
+          An order confirmation will be sent to the email address provided at checkout.
+        </p>
 
         {/* Order Summary */}
         <h2 className="text-white text-2xl font-semibold mt-8 mb-5">
