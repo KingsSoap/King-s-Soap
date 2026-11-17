@@ -287,7 +287,7 @@ export const validateCartHandler = async (req, res) => {
     console.error("Cart validation handler error:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to validate cart.",
+      message: "Failed to validate cart. Please try again.",
     });
   }
 };
@@ -491,12 +491,18 @@ export const createCheckoutSession = async (req, res) => {
     }
     
     // 6. Create Stripe Session configured for Shipping or Local Pickup
-    const clientUrl = (
-      process.env.CLIENT_URL ||
-      req.headers.origin ||
-      "http://localhost:5173"
-    ).replace(/\/+$/, "");
+    const clientUrl = process.env.CLIENT_URL?.replace(/\/+$/, "");
 
+    if (!clientUrl || !/^https?:\/\/[^/]+$/.test(clientUrl)) {
+      throw new Error("CLIENT_URL is missing or invalid.");
+    }
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      !clientUrl.startsWith("https://")
+    ) {
+      throw new Error("CLIENT_URL must use HTTPS in production.");
+    }
 
     const sessionConfig = {
       payment_method_types: ["card"],
@@ -575,10 +581,13 @@ export const createCheckoutSession = async (req, res) => {
     
     });
   } catch (error) {
-    console.error("Checkout session error:", error);
+    console.error(
+      "Checkout session creation failed:",
+      error?.code || error?.type || "Unknown error"
+    );
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to create checkout session.",
+      message: "Failed to create checkout session. Please try again.",
     });
   }
 };
@@ -659,7 +668,9 @@ export const acceptOrder = async (req, res) => {
             }
             shippingDetails = session.shipping_details || session.customer_details;
           } catch (sessionErr) {
-            console.warn(`Could not retrieve Stripe session ${order.stripe_session_id} for weight or shipping details:`, sessionErr.message);
+            console.warn(
+            "Could not retrieve Stripe session for weight or shipping details."
+            );
           }
         }
 
@@ -709,7 +720,7 @@ export const acceptOrder = async (req, res) => {
     console.error("Error in acceptOrder:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Failed to accept order.",
+      message:"Failed to accept order. Please try again.",
     });
   }
 };
@@ -816,7 +827,7 @@ export const declineOrder = async (req, res) => {
     console.error("Error in declineOrder:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Failed to decline order.",
+      message: "Failed to decline order. Please try again.",
     });
   }
 };
@@ -917,7 +928,7 @@ export const requestCancelOrder = async (req, res) => {
     console.error("Error in requestCancelOrder:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Failed to submit cancellation request.",
+      message: "Failed to submit cancellation request. Please try again.",
     });
   }
 };
@@ -946,7 +957,6 @@ export const getOrderBySession = async (req, res) => {
         id,
         status,
         total_amount,
-        customer_email,
         order_items (
           id,
           quantity,
@@ -972,7 +982,7 @@ export const getOrderBySession = async (req, res) => {
     console.error("Error in getOrderBySession:", err);
     return res.status(500).json({
       success: false,
-      message: err.message || "Failed to load order.",
+      message: "Failed to load order. Please try again.",
     });
   }
 };

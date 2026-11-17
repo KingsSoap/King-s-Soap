@@ -40,7 +40,7 @@ export const sendBrevoEmail = async ({ to, subject, htmlContent, textContent }) 
     return { success: true, messageId: result.messageId };
   } catch (err) {
     console.error("Failed to connect to Brevo API:", err.message || err);
-    return { success: false, error: err.message };
+    return { success: false, error:  "Email service temporarily unavailable.", };
   }
 };
 

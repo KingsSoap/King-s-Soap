@@ -220,7 +220,7 @@ export const handleStripeWebhook = async (req, res) => {
             existingOrder.status !== "on_hold" ||
             existingOrder.inventory_processed_at !== null
           ) {
-            console.log(`Order ${orderId || session.id} already processed or not eligible. Skipping.`);
+            console.log("Stripe checkout event already processed or not eligible. Skipping.");
             break;
           }
 

@@ -31,8 +31,6 @@ export const getAllProducts = async (req, res) => {};
 
 export const createProduct = async (req, res) => {
     try {
-        console.log("Body:", req.body);
-        console.log("Files:", req.files);
 
 
         // Trim text fields and treat missing or non-text values as empty

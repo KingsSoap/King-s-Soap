@@ -12,7 +12,7 @@ export const createMessage = async ( req, res) => {
         customerEmail,
         subject,
         message,
-    } = req.body;
+    } = req.body || {};
 
 
     //Ensure all fields are filled
@@ -185,13 +185,13 @@ export const saveResponse = async (req, res) => {
         });
     }
 
-    //Convert Brevo's response into a JS object
-    const brevoResult = await brevoResponse.json();
 
     //If brevo rejected email give error
     if (!brevoResponse.ok) {
-        console.error("Brevo could not send the email:", brevoResult);
-
+    console.error(
+        "Brevo could not send the email. HTTP status:",
+        brevoResponse.status
+    );
         return res.status(502).json({
             message: "Failed to send response email",
         });

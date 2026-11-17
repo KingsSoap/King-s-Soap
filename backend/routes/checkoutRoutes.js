@@ -1,4 +1,5 @@
 import express from "express";
+import { rateLimit } from "express-rate-limit";
 import {
   validateCartHandler,
   createCheckoutSession,
@@ -13,6 +14,33 @@ import { previewDiscount } from "../controllers/checkoutController.js";
 
 const router = express.Router();
 
+// Limit checkout session creation to 10 requests per 15 minutes per IP
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many checkout attempts. Please try again later.",
+  },
+});
+
+
+// Limit discount-code previews to 20 requests per 15 minutes per IP
+const discountPreviewLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many discount attempts. Please try again later.",
+  },
+});
+
+
+
 /**
  * Task 2: Validate cart stock, availability, and return dynamic Stripe line items.
  * Accepts Authorization Bearer token or userId in request body / query.
@@ -23,10 +51,14 @@ router.get("/validate", optionalAuth, validateCartHandler);
 /**
  * Task 3 (DT-489): Create Stripe Checkout Session, insert pending order, and return session URL.
  */
-router.post("/create-session", optionalAuth, createCheckoutSession);
-
+router.post(
+  "/create-session",
+  checkoutLimiter,
+  optionalAuth,
+  createCheckoutSession
+);
 // Check a code against the signed-in customer's current cart.
-router.post("/preview-discount", optionalAuth, previewDiscount);
+router.post("/preview-discount", discountPreviewLimiter, optionalAuth, previewDiscount);
 
 /**
  * DT-543: Accept an order on hold, capture Stripe funds, purchase postage label, transition to 'accepted'.
