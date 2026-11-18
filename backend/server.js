@@ -43,6 +43,9 @@ app.post(
   handleStripeWebhook
 );
 
+// Parse JSON request bodies for all other API routes
+app.use(express.json());
+
 app.use("/api/products", productRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/discounts", discountRoutes);
