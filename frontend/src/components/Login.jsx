@@ -1,18 +1,11 @@
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import supabase from "../supabaseClient";
 import { useAuth } from "../context/AuthContext";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 
-const getImageUrl = (imagePath) => {
-  const { data } = supabase.storage
-    .from("Product Images")
-    .getPublicUrl(imagePath);
-  return data.publicUrl;
-};
+
 
 function HomeLogin() {
-  const backgroundImage = getImageUrl("images/login-background-image.jpg");
   const { signInUser } = useAuth();
   const navigate = useNavigate();
 
@@ -34,15 +27,9 @@ function HomeLogin() {
     }
   };
 
-  return (
-    <div className="relative min-h-dvh bg-white flex items-center justify-center px-4 pt-8 pb-8 md:pt-15">       <img
-        src={backgroundImage}
-        alt="Background"
-        className="absolute inset-0 w-full h-full object-cover z-0"
-      />
-      <div className="absolute inset-0 z-0 bg-black/25" aria-hidden="true" />
-
-      <div className="relative w-full max-w-md px-4 md:px-6 py-8 bg-white rounded-lg shadow-lg z-20">
+ return (
+  <div className="relative flex min-h-screen items-center justify-center px-4 pt-8 pb-8 md:pt-15">
+    <div className="relative w-full max-w-md px-4 md:px-6 py-8 bg-white rounded-lg shadow-lg z-20">
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <label className="block text-lg md:text-xl font-serif text-gray-800 mb-2">
