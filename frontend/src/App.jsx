@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import CheckAdminPerm from "./components/CheckAdminPerm";
 import AdminHeader from "./components/AdminHeader";
+import supabase from "./supabaseClient";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -104,6 +105,39 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />;
 }
 
+
+function PageLayout({ children }) {
+  const location = useLocation();
+  const isLoginPage = location.pathname.toLowerCase() === "/login";
+
+  const { data } = supabase.storage
+    .from("Product Images")
+    .getPublicUrl("images/login-background-image.jpg");
+
+  return (
+    <div className="relative flex min-h-screen flex-col">
+      {isLoginPage && (
+        <>
+          <img
+            src={data.publicUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover z-0"
+          />
+          <div
+            className="absolute inset-0 z-0 bg-black/25"
+            aria-hidden="true"
+          />
+        </>
+      )}
+
+      <div className="relative z-10 flex flex-1 flex-col">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -111,8 +145,8 @@ function App() {
         <Navbar />
       </AppContent>
 
-      <div className="relative flex flex-col min-h-screen">
-        <div className="flex-grow">
+    <PageLayout>
+          <div className="flex-grow">
           <CartRouteLayer>
             {(routeLocation) => (
               <Routes location={routeLocation}>
@@ -206,7 +240,7 @@ function App() {
         <AppContent>
           <Footer />
         </AppContent>
-      </div>
+      </PageLayout>
     </BrowserRouter>
   );
 }
