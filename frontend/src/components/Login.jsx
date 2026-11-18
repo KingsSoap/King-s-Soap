@@ -35,8 +35,7 @@ function HomeLogin() {
   };
 
   return (
-    <div className="relative min-h-screen bg-white flex items-center justify-center px-4 pt-8 pb-8 md:pt-15">
-       <img
+    <div className="relative min-h-dvh bg-white flex items-center justify-center px-4 pt-8 pb-8 md:pt-15">       <img
         src={backgroundImage}
         alt="Background"
         className="absolute inset-0 w-full h-full object-cover z-0"
