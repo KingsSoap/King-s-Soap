@@ -99,7 +99,9 @@ function AdminCreateDiscount({ onClose, onDiscountCreated }) {
                 throw new Error("Sign in to create a discount.");
             }
 
-            const response = await fetch("http://localhost:3000/api/discounts", {
+            const response = await fetch(
+            `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/discounts`,
+            {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

@@ -120,8 +120,10 @@ function AdminCreateProduct( {
         }
         
         
-        // Send the product information with the authentication token
-        const response = await fetch("http://localhost:3000/api/products", {
+      // Send the product information with the authentication token
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/products`,
+        {
           method: "POST",
           headers: {
             Authorization: `Bearer ${session.access_token}`,
