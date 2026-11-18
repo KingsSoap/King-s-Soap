@@ -226,8 +226,8 @@ const AdminUpdateProduct = ({
       );
       //Send to backend
       const imageResponse = await fetch(
-         `http://localhost:3000/api/products/${id}/images`,
-        {
+      `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/products/${id}/images`,
+      {
           method: "POST",
           body: imageFormData, //Send body with all selected image files
         }
@@ -302,8 +302,8 @@ const AdminUpdateProduct = ({
 
     //Ask the backend to delete the image
     const deleteResponse = await fetch(
-      `http://localhost:3000/api/products/${id}/images/${imageToDelete.id}`,
-      {
+    `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/products/${id}/images/${imageToDelete.id}`,
+    {
         method: "DELETE",
       }
     );

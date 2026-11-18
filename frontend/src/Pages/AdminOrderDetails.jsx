@@ -232,7 +232,7 @@ function AdminOrderDetails() {
           : action;
 
       const response = await fetch(
-        `http://localhost:3000/api/checkout/orders/${order.order_id}/${endpointAction}`,
+        `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/checkout/orders/${order.order_id}/${endpointAction}`,
         {
           method: "POST",
           headers: {

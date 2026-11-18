@@ -51,8 +51,8 @@ function AdminUpdateDiscount({ discountId, onClose, onDiscountChanged }) {
                 }
 
                 const response = await fetch(
-                    `http://localhost:3000/api/discounts/${discountId}`,
-                    {
+                `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/discounts/${discountId}`,
+                {
                         headers: {
                             Authorization: `Bearer ${session.access_token}`,
                         },
@@ -180,8 +180,8 @@ function AdminUpdateDiscount({ discountId, onClose, onDiscountChanged }) {
             }
 
             const response = await fetch(
-                `http://localhost:3000/api/discounts/${discountId}`,
-                {
+            `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/discounts/${discountId}`,
+            {
                     method: "PATCH",
                     headers: {
                         "Content-Type": "application/json",
@@ -247,8 +247,8 @@ function AdminUpdateDiscount({ discountId, onClose, onDiscountChanged }) {
             }
 
             const response = await fetch(
-                `http://localhost:3000/api/discounts/${discountId}/archive`,
-                {
+            `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/discounts/${discountId}/archive`,
+            {
                     method: "PATCH",
                     headers: {
                         Authorization: `Bearer ${session.access_token}`,

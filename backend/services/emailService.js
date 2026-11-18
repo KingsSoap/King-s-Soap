@@ -62,8 +62,11 @@ export const sendOrderConfirmationEmail = async ({
     throw new Error("Cancellation token is required.");
   }
 
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+const clientUrl = process.env.CLIENT_URL?.replace(/\/+$/, "");
 
+if (!clientUrl) {
+  throw new Error("CLIENT_URL is not configured.");
+}
   // Include the order ID and secure cancellation token in the link
   const cancellationUrl =
     `${clientUrl}/request-cancellation` +
