@@ -48,9 +48,9 @@ const Cart = ({ restoredBackgroundLocation = null }) => {
       const guestCart = JSON.parse(localStorage.getItem("guestCart") || "[]");
 
       const response = await fetch(
-      `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/checkout/create-session`,
+      `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/checkout/preview-discount`,
       {
-    method: "POST",
+        method: "POST",
         headers,
         body: JSON.stringify({ 
           discountCode: discountCode.trim(),
@@ -107,8 +107,8 @@ const Cart = ({ restoredBackgroundLocation = null }) => {
 
       // FIXED: discountCode is now properly nested inside JSON.stringify
       const response = await fetch(
-      `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/checkout/preview-discount`,
-      {
+  `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/checkout/create-session`,
+  {
     method: "POST",
         headers,
         body: JSON.stringify({
